@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"sync"
 
@@ -18,9 +19,14 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(10)
 
-	// Create a queue subscription on "updates" with queue name "workers"
-	sub, err := nc.QueueSubscribe(messaging.IN_Q, messaging.GROUP, func(m *nats.Msg) {
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ec.Close()
 
+	sub, err := ec.Subscribe(messaging.IN_Q, func(spot_msg *messaging.SpotMessage) {
+		log.Printf("%d", spot_msg.Part.Id)
 		wg.Done()
 	})
 
@@ -35,4 +41,19 @@ func main() {
 
 	// Drain connection (Preferred for responders)
 	nc.Drain()
+}
+
+func handle_message(message *nats.Msg) {
+	var spot_message *messaging.SpotMessage
+
+	println("Received message")
+
+	payload := message.Data
+	err := json.Unmarshal(payload, spot_message)
+	if err != nil {
+		println(err)
+		panic(err)
+	}
+
+	println(spot_message)
 }
