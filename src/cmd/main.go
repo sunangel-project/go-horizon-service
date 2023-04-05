@@ -1,17 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"sync"
 
 	"github.com/nats-io/nats.go"
 	"github.com/sunangel-project/go-horizon-service/src/messaging"
+	"github.com/sunangel-project/horizon"
+	"github.com/sunangel-project/horizon/location"
 )
 
 func main() {
 	// Connect to a server
-	nc, _ := nats.Connect(nats.DefaultURL)
+	nc, err := nats.Connect(nats.DefaultURL)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	defer nc.Close()
 
@@ -27,9 +31,9 @@ func main() {
 
 	sub, err := ec.Subscribe(messaging.IN_Q, func(spot_msg *messaging.SpotMessage) {
 		log.Printf("%d", spot_msg.Part.Id)
+		handle_message(spot_msg)
 		wg.Done()
 	})
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,17 +47,15 @@ func main() {
 	nc.Drain()
 }
 
-func handle_message(message *nats.Msg) {
-	var spot_message *messaging.SpotMessage
-
-	println("Received message")
-
-	payload := message.Data
-	err := json.Unmarshal(payload, spot_message)
-	if err != nil {
-		println(err)
-		panic(err)
+func handle_message(spot_msg *messaging.SpotMessage) {
+	loc := location.Location{
+		Latitude:  spot_msg.Spot.Loc.Lat,
+		Longitude: spot_msg.Spot.Loc.Lon,
 	}
+	radius := 3000
 
-	println(spot_message)
+	_ = horizon.NewHorizon(&loc, radius)
+
+	log.Println("Calculated horizon")
+	//log.Println(spot_horizon)
 }
