@@ -39,7 +39,7 @@ func Connect() *nats.Conn {
 	// TODO: get host from env
 	nc, err := nats.Connect(nats.DefaultURL)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	return nc
@@ -48,7 +48,7 @@ func Connect() *nats.Conn {
 func EncodedConnection(nc *nats.Conn) *nats.EncodedConn {
 	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	return ec
@@ -57,7 +57,7 @@ func EncodedConnection(nc *nats.Conn) *nats.EncodedConn {
 func JetStream(nc *nats.Conn) nats.JetStreamContext {
 	js, err := nc.JetStream()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	return js
@@ -72,7 +72,7 @@ func KeyValueHorizon(js nats.JetStreamContext) nats.KeyValue {
 		})
 
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 	}

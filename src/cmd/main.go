@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
 	"github.com/nats-io/nats.go"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sunangel-project/go-horizon-service/src/messaging"
 	"github.com/sunangel-project/horizon"
 	"github.com/sunangel-project/horizon/location"
@@ -23,12 +25,11 @@ func main() {
 	wg.Add(10)
 
 	sub, err := ec.Subscribe(messaging.IN_Q, func(spot_msg *messaging.SpotMessage) {
-		log.Printf("%d", spot_msg.Part.Id)
 		handle_message(spot_msg, kv)
 		wg.Done()
 	})
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	// Wait for messages to come in
@@ -41,15 +42,39 @@ func main() {
 }
 
 func handle_message(spot_msg *messaging.SpotMessage, kv nats.KeyValue) {
-
 	loc := location.Location{
 		Latitude:  spot_msg.Spot.Loc.Lat,
 		Longitude: spot_msg.Spot.Loc.Lon,
 	}
 	radius := 500
 
-	_ = horizon.NewHorizon(&loc, radius)
+	// One deg ~ 111 000 m
+	id := uuid.NewV5(uuid.UUID{}, fmt.Sprintf(
+		"lat: %.5f, lon: %5f, rad: %d",
+		loc.Latitude, loc.Longitude, radius,
+	))
+	key := fmt.Sprint("horizon-v1.0.0-", id)
 
-	log.Println("Calculated horizon")
-	//log.Println(spot_horizon)
+	_, err := kv.Get(key)
+	if err != nil {
+		log.Print("Didn't find horizon")
+		hor := horizon.NewHorizon(&loc, radius)
+
+		kv.Create(key, hor.AltitudeToBytes())
+	} else {
+		log.Print("Found horizon")
+
+		/* Not needed ?
+		altitude, err := horizon.AltitudeFromBytes(hor_entry.Value())
+		if err != nil {
+			panic(err)
+		}
+
+		hor = horizon.NewHorizonWithAltitude(
+			&loc,
+			radius,
+			altitude,
+		)
+		*/
+	}
 }
