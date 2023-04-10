@@ -1,5 +1,13 @@
 package messaging
 
+import (
+	"log"
+
+	"github.com/nats-io/nats.go"
+)
+
+const STORE_NAME = "horizons"
+
 const IN_Q = "spots"
 const GROUP = "horizon-service"
 
@@ -25,4 +33,49 @@ type SpotSubMessage struct {
 type SpotMessage struct {
 	Part PartSubMessage `json:"part"`
 	Spot SpotSubMessage `json:"spot"`
+}
+
+func Connect() *nats.Conn {
+	// TODO: get host from env
+	nc, err := nats.Connect(nats.DefaultURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nc
+}
+
+func EncodedConnection(nc *nats.Conn) *nats.EncodedConn {
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return ec
+}
+
+func JetStream(nc *nats.Conn) nats.JetStreamContext {
+	js, err := nc.JetStream()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return js
+}
+
+func KeyValueHorizon(js nats.JetStreamContext) nats.KeyValue {
+	kv, err := js.KeyValue(STORE_NAME)
+	if err != nil {
+		log.Printf("Bucket %s not found, creating", STORE_NAME)
+		kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
+			Bucket: STORE_NAME,
+		})
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+	}
+
+	return kv
 }

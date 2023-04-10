@@ -11,27 +11,20 @@ import (
 )
 
 func main() {
-	// Connect to a server
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	nc := messaging.Connect()
 	defer nc.Close()
+	ec := messaging.EncodedConnection(nc)
+	defer ec.Close()
+	js := messaging.JetStream(nc)
+	kv := messaging.KeyValueHorizon(js)
 
 	// Use a WaitGroup to wait for 10 messages to arrive
 	wg := sync.WaitGroup{}
 	wg.Add(10)
 
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ec.Close()
-
 	sub, err := ec.Subscribe(messaging.IN_Q, func(spot_msg *messaging.SpotMessage) {
 		log.Printf("%d", spot_msg.Part.Id)
-		handle_message(spot_msg)
+		handle_message(spot_msg, kv)
 		wg.Done()
 	})
 	if err != nil {
@@ -47,12 +40,13 @@ func main() {
 	nc.Drain()
 }
 
-func handle_message(spot_msg *messaging.SpotMessage) {
+func handle_message(spot_msg *messaging.SpotMessage, kv nats.KeyValue) {
+
 	loc := location.Location{
 		Latitude:  spot_msg.Spot.Loc.Lat,
 		Longitude: spot_msg.Spot.Loc.Lon,
 	}
-	radius := 3000
+	radius := 500
 
 	_ = horizon.NewHorizon(&loc, radius)
 

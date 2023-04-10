@@ -12,6 +12,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.9.15 // indirect
 	github.com/nats-io/nkeys v0.4.4 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
+	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sunangel-project/angle v0.1.0 // indirect
 	github.com/sunangel-project/directory v0.1.0 // indirect
 	github.com/tkrajina/go-elevations v0.1.0 // indirect
